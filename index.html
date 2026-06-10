@@ -34,6 +34,16 @@ body{background:var(--bg);color:var(--ink);font-family:"Noto Sans Georgian",syst
 .tabs{display:flex;gap:8px;margin-bottom:10px}
 .tab{flex:1;padding:9px 0;text-align:center;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--dim);font-weight:700;font-size:13.5px;cursor:pointer}
 .tab.on{background:var(--ink);color:#0A1020;border-color:var(--ink)}
+.searchRow{display:flex;align-items:center;gap:8px;margin:0 0 10px}
+.searchBox{position:relative;flex:1;min-width:0}
+.searchIcon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--faint);font-family:Archivo,sans-serif;font-size:15px;font-weight:900;pointer-events:none}
+.searchInput{width:100%;height:40px;border:1px solid var(--line);border-radius:10px;background:rgba(14,22,38,.94);color:var(--ink);font-family:inherit;font-size:13.5px;font-weight:700;padding:0 38px 0 34px;outline:none}
+.searchInput::placeholder{color:var(--faint);font-weight:600}
+.searchInput:focus{border-color:var(--ngt);box-shadow:0 0 0 2px rgba(124,140,255,.16)}
+.clearSearch{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:24px;height:24px;border:0;border-radius:50%;background:transparent;color:var(--dim);font-size:20px;line-height:20px;cursor:pointer;display:none}
+.clearSearch.on{display:block}
+.clearSearch:hover,.clearSearch:focus-visible{color:var(--ink);outline:none}
+.resultCount{flex:0 0 auto;color:var(--faint);font-size:11px;font-weight:800;letter-spacing:.4px;white-space:nowrap}
 .chips{display:flex;gap:7px;overflow-x:auto;padding-bottom:8px;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
 .chip{flex:0 0 auto;padding:7px 13px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);color:var(--dim);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
@@ -104,7 +114,7 @@ table.sched td .cell{display:block;width:100%;height:30px;line-height:30px;font-
 .lg{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--dim);font-weight:600}
 .lg .dot{width:11px;height:11px;border-radius:3px}
 .note{font-size:12px;color:var(--faint);margin-top:10px;line-height:1.6}
-.empty{padding:40px 10px;text-align:center;color:var(--dim)}
+.empty{padding:40px 10px;text-align:center;color:var(--dim);line-height:1.7}
 .jump{position:fixed;right:16px;bottom:18px;z-index:60;background:var(--ink);color:#0A1020;border:0;border-radius:999px;padding:11px 17px;font-weight:800;font-size:13px;font-family:inherit;cursor:pointer;box-shadow:0 6px 22px rgba(0,0,0,.45);display:none}
 .modal{position:fixed;inset:0;z-index:80;display:none;align-items:center;justify-content:center;background:rgba(3,7,16,.72);padding:18px}
 .modal.on{display:flex}
@@ -117,6 +127,7 @@ table.sched td .cell{display:block;width:100%;height:30px;line-height:30px;font-
 .infoBody{padding:16px 18px 18px;color:var(--ink);font-size:14px;line-height:1.75;overflow:auto}
 .infoBody p+p{margin-top:10px}
 .infoLabel{display:block;margin-bottom:3px;color:var(--dim);font-size:10px;font-weight:800;letter-spacing:.8px;text-transform:uppercase}
+@media(max-width:420px){.searchRow{align-items:stretch;flex-direction:column}.resultCount{align-self:flex-end}}
 @media(min-width:560px){.match{grid-template-columns:74px 1fr}.when .hh{font-size:24px}}
 </style>
 </head>
@@ -132,12 +143,19 @@ table.sched td .cell{display:block;width:100%;height:30px;line-height:30px;font-
       <button class="tab on" id="tabM" onclick="setTab('m')">მატჩები</button>
       <button class="tab" id="tabG" onclick="setTab('g')">ცვლების ბადე</button>
     </div>
+    <div class="searchRow" id="searchRow">
+      <div class="searchBox">
+        <span class="searchIcon">⌕</span>
+        <input class="searchInput" id="searchInput" type="search" placeholder="ძებნა: გუნდი, ქალაქი, თანამშრომელი, ჯგუფი" autocomplete="off" oninput="setSearch(this.value)">
+        <button class="clearSearch" id="clearSearch" type="button" onclick="clearSearch()" aria-label="ძებნის გასუფთავება">×</button>
+      </div>
+      <div class="resultCount" id="resultCount"></div>
+    </div>
     <div class="chips" id="workerChips"></div>
     <div class="chips">
       <select class="chip gsel" id="groupSel" onchange="state.group=this.value;render()">
         <option value="">ყველა ჯგუფი</option>
       </select>
-      <button class="chip" id="hideOff" onclick="toggleNight()">🌙 მხოლოდ ღამის მატჩები</button>
     </div>
   </div>
 
@@ -178,7 +196,16 @@ const SHIFT_ORDER = ["midday","evening","night","morning"];
 const KA_WD = ["კვირა","ორშაბათი","სამშაბათი","ოთხშაბათი","ხუთშაბათი","პარასკევი","შაბათი"];
 const KA_MON = ["იან","თებ","მარ","აპრ","მაი","ივნ","ივლ","აგვ","სექ","ოქტ","ნოე","დეკ"];
 
-const state = {tab:'m', worker:null, group:'', night:false};
+const state = {tab:'m', worker:null, group:'', query:''};
+const TEAM_EN = {
+  MEX:"Mexico", RSA:"South Africa", KOR:"South Korea", CZE:"Czech Republic", CAN:"Canada", BIH:"Bosnia & Herzegovina",
+  QAT:"Qatar", SUI:"Switzerland", BRA:"Brazil", MAR:"Morocco", HAI:"Haiti", SCO:"Scotland", USA:"USA", PAR:"Paraguay",
+  AUS:"Australia", TUR:"Türkiye", GER:"Germany", CUW:"Curaçao", CIV:"Ivory Coast", ECU:"Ecuador", NED:"Netherlands",
+  JPN:"Japan", SWE:"Sweden", TUN:"Tunisia", BEL:"Belgium", EGY:"Egypt", IRN:"Iran", NZL:"New Zealand", ESP:"Spain",
+  CPV:"Cape Verde", KSA:"Saudi Arabia", URU:"Uruguay", FRA:"France", SEN:"Senegal", IRQ:"Iraq", NOR:"Norway",
+  ARG:"Argentina", ALG:"Algeria", AUT:"Austria", JOR:"Jordan", POR:"Portugal", COD:"DR Congo", UZB:"Uzbekistan",
+  COL:"Colombia", ENG:"England", CRO:"Croatia", GHA:"Ghana", PAN:"Panama"
+};
 const STORIES = {
   1:"მექსიკა 2026 წლის მსოფლიო ჩემპიონატის ერთ-ერთი მასპინძელი ქვეყანაა. სამხრეთ აფრიკა 2010 წლის მსოფლიო ჩემპიონატის მასპინძელი იყო. საინტერესო ფაქტია, რომ მექსიკა და სამხრეთ აფრიკა ერთმანეთს 2010 წლის მსოფლიო ჩემპიონატის გახსნით მატჩშიც შეხვდნენ — ის თამაში 1:1 დასრულდა. იმ შეხვედრაში სამხრეთ აფრიკელმა სიფივე ჩაბალალამ ტურნირის გახსნითი გოლი გაიტანა.",
   2:"სამხრეთ კორეა მსოფლიო ჩემპიონატების რეგულარული მონაწილეა და აზიური ფეხბურთის ერთ-ერთი ყველაზე სტაბილური ნაკრებია. სამხრეთ კორეამ 2002 წლის მსოფლიო ჩემპიონატზე ნახევარფინალში ითამაშა. ჩეხეთის ნაკრები დამოუკიდებელი ქვეყნის სახელით მუნდიალზე 2006 წელსაც მონაწილეობდა. ისტორიულად ჩეხოსლოვაკია მსოფლიო ჩემპიონატის ფინალში ორჯერ იყო გასული — 1934 და 1962 წლებში.",
@@ -264,23 +291,44 @@ const pad = n => String(n).padStart(2,'0');
 const fmtD = d => `${d.getDate()} ${KA_MON[d.getMonth()]}`;
 const fmtT = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 const esc = s => String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const norm = s => String(s||'').toLocaleLowerCase('ka-GE').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 
 function teamName(code){ return DATA.teams[code]?.[0] || code; }
+function searchText(m){
+  const teams = [m.h,m.a].flatMap(c=>[c, teamName(c), TEAM_EN[c]]);
+  const duty = m.on.flatMap(([w,s])=>[w, s, SH[s]?.ka, SH[s]?.time]);
+  return norm([
+    ...teams, ...duty, m.g, `ჯგუფი ${m.g}`, `group ${m.g}`, m.city, m.stadium,
+    fmtD(P(m.tb)), fmtT(P(m.tb)), STORIES[m.id]
+  ].join(' '));
+}
+function matchesSearch(m){
+  const q = norm(state.query).trim();
+  if(!q) return true;
+  if(q.length===1 && /^[a-l]$/.test(q)) return m.g.toLowerCase()===q;
+  const group = q.match(/^(?:group|ჯგუფი|ჯგ\.?)\s*([a-l])$/);
+  if(group) return m.g.toLowerCase()===group[1];
+  return q.split(/\s+/).every(part=>searchText(m).includes(part));
+}
+function updateSearchUi(visible,total){
+  const input = document.getElementById('searchInput');
+  const clear = document.getElementById('clearSearch');
+  const count = document.getElementById('resultCount');
+  const hasQuery = !!state.query.trim();
+  if(input && document.activeElement!==input && input.value!==state.query) input.value = state.query;
+  clear?.classList.toggle('on', hasQuery);
+  if(count) count.textContent = `${visible}/${total} მატჩი`;
+}
+function setSearch(v){ state.query=v; render(); }
+function clearSearch(){
+  state.query='';
+  const input = document.getElementById('searchInput');
+  if(input){ input.value=''; input.focus(); }
+  render();
+}
 function defaultStory(m){
   const h = teamName(m.h), a = teamName(m.a);
   return `სოციალური კუთხე: ${h} — ${a} ჯგუფი ${m.g}-ის მატჩია. კარგი აქცენტებია გუნდების განსხვავებული ფეხბურთის სკოლები, ქალაქი ${m.city}, პირველი გოლი და თამაშის ტემპი.`;
-}
-function matchDutyText(m){
-  if(!m.on.length) return "ცვლა ჯერ არ არის გაწერილი, ამიტომ პოსტამდე პასუხისმგებელი ცალკე გადაამოწმე.";
-  const duty = m.on.map(([w,s])=>`${w} (${SH[s].ka})`).join(", ");
-  const primary = m.primary.length ? ` მთავარი დაწყებაზე: ${m.primary.join(", ")}.` : "";
-  return `მატჩზე დაფარული ცვლა: ${duty}.${primary}`;
-}
-function timeAngle(m){
-  const k = P(m.tb), h = k.getHours();
-  if(h < 10) return "თბილისისთვის დილის სლოტია, ამიტომ წინასწარ დაგეგმილი პოსტი და სწრაფი შედეგის შაბლონი განსაკუთრებით საჭიროა.";
-  if(h >= 23) return "გვიანი მატჩია თბილისის დროით, ამიტომ მოკლე live-copy და საბოლოო ანგარიშის ტექსტი წინასწარ ჯობია მზად იყოს.";
-  return "პრაიმ/საღამოს სლოტია, ამიტომ მატჩამდე ვიზუალი და პირველი ტაიმის სწრაფი განახლება კარგად იმუშავებს.";
 }
 function openInfo(id){
   const m = DATA.matches.find(x=>x.id===id);
@@ -318,14 +366,13 @@ function buildControls(){
       gs.insertAdjacentHTML('beforeend',`<option value="${g}">ჯგუფი ${g}</option>`);
     });
   }
-  document.getElementById('hideOff').classList.toggle('on', state.night);
 }
 function pick(w){ state.worker = (state.worker===w)?null:w; buildControls(); render(); }
-function toggleNight(){ state.night=!state.night; buildControls(); render(); }
 function setTab(t){
   state.tab=t;
   document.getElementById('tabM').classList.toggle('on',t==='m');
   document.getElementById('tabG').classList.toggle('on',t==='g');
+  document.getElementById('searchRow').style.display = t==='m'?'':'none';
   document.getElementById('feed').style.display = t==='m'?'':'none';
   document.getElementById('grid').style.display = t==='g'?'':'none';
   document.getElementById('jumpBtn').style.display = t==='m'?'':'none';
@@ -382,13 +429,14 @@ function render(){
   const byDay = {};
   DATA.matches.forEach(m=>{ (byDay[m.md] ||= []).push(m); });
 
-  let html='';
+  let html='', visible = 0;
   Object.keys(byDay).sort().forEach(md=>{
     let ms = byDay[md];
     if(state.group) ms = ms.filter(m=>m.g===state.group);
-    if(state.night) ms = ms.filter(m=>{const h=P(m.tb).getHours();return h>=23||h<10});
     if(state.worker) ms = ms.filter(m=>m.on.some(([w])=>w===state.worker));
+    if(state.query.trim()) ms = ms.filter(matchesSearch);
     if(!ms.length) return;
+    visible += ms.length;
 
     const d = P(`2026-${md}T12:00`);
     const W = dayWindows(md);
@@ -441,7 +489,11 @@ function render(){
     html += `</div>`;
   });
 
-  document.getElementById('feed').innerHTML = html || `<div class="empty">ფილტრით მატჩები ვერ მოიძებნა</div>`;
+  const empty = state.query.trim()
+    ? `ძებნით „${esc(state.query.trim())}“ მატჩები ვერ მოიძებნა`
+    : `ფილტრით მატჩები ვერ მოიძებნა`;
+  document.getElementById('feed').innerHTML = html || `<div class="empty">${empty}</div>`;
+  updateSearchUi(visible, DATA.matches.length);
 }
 
 /* ---------- grid tab ---------- */

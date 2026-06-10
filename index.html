@@ -49,6 +49,7 @@ body{background:var(--bg);color:var(--ink);font-family:"Noto Sans Georgian",syst
 .chip{flex:0 0 auto;padding:7px 13px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);color:var(--dim);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
 .chip.on{background:var(--ngt);border-color:var(--ngt);color:#0A1020}
 .chip.gsel{color:var(--ink)}
+.dateSel{min-width:146px}
 select.chip{appearance:none;-webkit-appearance:none;padding-right:26px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238E9CB8' stroke-width='1.6' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
 
 /* hero status */
@@ -62,6 +63,8 @@ select.chip{appearance:none;-webkit-appearance:none;padding-right:26px;backgroun
 
 /* matchday section */
 .day{margin:22px 0 10px}
+.day.jumpFocus{border-radius:12px;animation:dayFocus 1.15s ease}
+@keyframes dayFocus{0%{outline:2px solid rgba(124,140,255,.95);outline-offset:7px;background:rgba(124,140,255,.10)}100%{outline:2px solid transparent;outline-offset:12px;background:transparent}}
 .dayhead{display:flex;align-items:baseline;gap:10px;margin-bottom:9px}
 .dayhead .d{font-family:Archivo,sans-serif;font-weight:900;font-size:21px;letter-spacing:.4px}
 .dayhead .wd{color:var(--dim);font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.8px}
@@ -115,6 +118,7 @@ table.sched td .cell{display:block;width:100%;height:30px;line-height:30px;font-
 .lg .dot{width:11px;height:11px;border-radius:3px}
 .note{font-size:12px;color:var(--faint);margin-top:10px;line-height:1.6}
 .empty{padding:40px 10px;text-align:center;color:var(--dim);line-height:1.7}
+.dayEmpty{margin-top:8px;padding:14px 10px;border:1px dashed var(--line);border-radius:10px;background:rgba(14,22,38,.55)}
 .jump{position:fixed;right:16px;bottom:18px;z-index:60;background:var(--ink);color:#0A1020;border:0;border-radius:999px;padding:11px 17px;font-weight:800;font-size:13px;font-family:inherit;cursor:pointer;box-shadow:0 6px 22px rgba(0,0,0,.45);display:none}
 .modal{position:fixed;inset:0;z-index:80;display:none;align-items:center;justify-content:center;background:rgba(3,7,16,.72);padding:18px}
 .modal.on{display:flex}
@@ -153,6 +157,9 @@ table.sched td .cell{display:block;width:100%;height:30px;line-height:30px;font-
     </div>
     <div class="chips" id="workerChips"></div>
     <div class="chips">
+      <select class="chip gsel dateSel" id="dateSel" onchange="jumpToDate(this.value)" aria-label="თარიღზე გადასვლა">
+        <option value="">თარიღი</option>
+      </select>
       <select class="chip gsel" id="groupSel" onchange="state.group=this.value;render()">
         <option value="">ყველა ჯგუფი</option>
       </select>
@@ -196,7 +203,7 @@ const SHIFT_ORDER = ["midday","evening","night","morning"];
 const KA_WD = ["კვირა","ორშაბათი","სამშაბათი","ოთხშაბათი","ხუთშაბათი","პარასკევი","შაბათი"];
 const KA_MON = ["იან","თებ","მარ","აპრ","მაი","ივნ","ივლ","აგვ","სექ","ოქტ","ნოე","დეკ"];
 
-const state = {tab:'m', worker:null, group:'', query:''};
+const state = {tab:'m', worker:null, group:'', query:'', jumpDate:''};
 const TEAM_EN = {
   MEX:"Mexico", RSA:"South Africa", KOR:"South Korea", CZE:"Czech Republic", CAN:"Canada", BIH:"Bosnia & Herzegovina",
   QAT:"Qatar", SUI:"Switzerland", BRA:"Brazil", MAR:"Morocco", HAI:"Haiti", SCO:"Scotland", USA:"USA", PAR:"Paraguay",
@@ -294,6 +301,11 @@ const esc = s => String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"
 const norm = s => String(s||'').toLocaleLowerCase('ka-GE').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 
 function teamName(code){ return DATA.teams[code]?.[0] || code; }
+function matchDays(){ return [...new Set(DATA.matches.map(m=>m.md))].sort(); }
+function dateLabel(md){
+  const d = P(`2026-${md}T12:00`);
+  return `${d.getDate()} ${KA_MON[d.getMonth()]} · ${KA_WD[d.getDay()]}`;
+}
 function searchText(m){
   const teams = [m.h,m.a].flatMap(c=>[c, teamName(c), TEAM_EN[c]]);
   const duty = m.on.flatMap(([w,s])=>[w, s, SH[s]?.ka, SH[s]?.time]);
@@ -361,11 +373,18 @@ function buildControls(){
   wc.innerHTML = `<button class="chip ${!state.worker?'on':''}" onclick="pick(null)">ყველა</button>` +
     DATA.workers.map(w=>`<button class="chip ${state.worker===w?'on':''}" onclick="pick('${w}')">${w}</button>`).join('');
   const gs = document.getElementById('groupSel');
-  if(gs.options.length===1){
+  if(gs.options.length<=1){
     [...new Set(DATA.matches.map(m=>m.g))].sort().forEach(g=>{
       gs.insertAdjacentHTML('beforeend',`<option value="${g}">ჯგუფი ${g}</option>`);
     });
   }
+  const ds = document.getElementById('dateSel');
+  if(ds.options.length<=1){
+    matchDays().forEach(d=>{
+      ds.insertAdjacentHTML('beforeend',`<option value="${d}">${dateLabel(d)}</option>`);
+    });
+  }
+  ds.value = state.jumpDate;
 }
 function pick(w){ state.worker = (state.worker===w)?null:w; buildControls(); render(); }
 function setTab(t){
@@ -435,7 +454,8 @@ function render(){
     if(state.group) ms = ms.filter(m=>m.g===state.group);
     if(state.worker) ms = ms.filter(m=>m.on.some(([w])=>w===state.worker));
     if(state.query.trim()) ms = ms.filter(matchesSearch);
-    if(!ms.length) return;
+    const isJumpDate = state.jumpDate===md;
+    if(!ms.length && !isJumpDate) return;
     visible += ms.length;
 
     const d = P(`2026-${md}T12:00`);
@@ -458,6 +478,9 @@ function render(){
       <div class="rail">${SHIFT_ORDER.map(seg).join('')}${ticks}</div>
       <div class="railx"><span>12:00</span><span>19:00</span><span>02:00</span><span>06:00</span><span>10:00</span></div>`;
 
+    if(!ms.length){
+      html += `<div class="empty dayEmpty">ამ თარიღზე არჩეული ფილტრით მატჩები არ ჩანს</div>`;
+    }
     ms.forEach(m=>{
       const k = P(m.tb), end = new Date(k.getTime()+125*6e4);
       const isLive = now>=k && now<end, isDone = now>=end;
@@ -498,7 +521,7 @@ function render(){
 
 /* ---------- grid tab ---------- */
 function renderGrid(){
-  const days = [...new Set(DATA.matches.map(m=>m.md))].sort();
+  const days = matchDays();
   let h = `<div class="gridwrap"><table class="sched"><thead><tr><th></th>${days.map(d=>`<th>${parseInt(d.slice(3))}</th>`).join('')}</tr></thead><tbody>`;
   DATA.workers.forEach(w=>{
     h += `<tr><th>${w}</th>` + days.map(d=>{
@@ -511,7 +534,31 @@ function renderGrid(){
   h += `</tbody></table></div><div class="note">სვეტები = ივნისის მატჩდღეები (11–27). უჯრაზე დაჭერით გადახვალ იმ დღის მატჩებზე.</div>`;
   document.getElementById('grid').innerHTML = h;
 }
-function gotoDay(d){ setTab('m'); requestAnimationFrame(()=>document.getElementById('d'+d)?.scrollIntoView({behavior:'smooth',block:'start'})); }
+function focusDay(d){
+  const el = document.getElementById('d'+d);
+  if(!el) return;
+  el.classList.remove('jumpFocus');
+  void el.offsetWidth;
+  el.classList.add('jumpFocus');
+  el.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function gotoDay(d){
+  if(!d) return;
+  state.jumpDate = d;
+  const ds = document.getElementById('dateSel');
+  if(ds) ds.value = d;
+  setTab('m');
+  render();
+  requestAnimationFrame(()=>focusDay(d));
+}
+function jumpToDate(d){
+  if(!d){
+    state.jumpDate = '';
+    render();
+    return;
+  }
+  gotoDay(d);
+}
 
 /* ---------- misc ---------- */
 function renderLegend(){
@@ -520,10 +567,10 @@ function renderLegend(){
 }
 function jumpToday(){
   const now = tbNow();
-  const days = [...new Set(DATA.matches.map(m=>m.md))].sort();
+  const days = matchDays();
   const today = `${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
   const target = days.includes(today)?today:(days.find(d=>d>=today)||days[days.length-1]);
-  document.getElementById('d'+target)?.scrollIntoView({behavior:'smooth',block:'start'});
+  gotoDay(target);
 }
 function tickClock(){ document.getElementById('clock').textContent = fmtT(tbNow()); }
 

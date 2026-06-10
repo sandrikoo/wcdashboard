@@ -414,7 +414,11 @@ function render(){
       const k = P(m.tb), end = new Date(k.getTime()+125*6e4);
       const isLive = now>=k && now<end, isDone = now>=end;
       const nextDay = k.getDate()!==d.getDate();
-      const pills = m.on.map(([w,s])=>{
+      const orderedOn = [...m.on].sort((a,b)=>{
+        const ap = m.primary.includes(a[0]), bp = m.primary.includes(b[0]);
+        return Number(bp) - Number(ap);
+      });
+      const pills = orderedOn.map(([w,s])=>{
         const prim = m.primary.includes(w);
         return `<span class="wp ${prim?'':'sec'}" style="background:${SH[s].color};color:${SH[s].txt}">${w}<small>${SH[s].ka}${prim?'':' · ბოლო ნაწილი'}</small></span>`;
       }).join('');

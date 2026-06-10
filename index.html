@@ -93,7 +93,13 @@ select.chip{appearance:none;-webkit-appearance:none;padding-right:26px;backgroun
 .when .nx{display:inline-block;margin-top:4px;font-size:9px;font-weight:800;color:var(--mid);border:1px solid rgba(255,206,61,.4);border-radius:5px;padding:1px 5px;letter-spacing:.4px}
 .teams{display:flex;flex-direction:column;gap:4px;min-width:0}
 .trow{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14.5px}
-.trow .fl{font-size:17px;width:22px;text-align:center;flex:0 0 auto}
+.fl{display:inline-flex;align-items:center;justify-content:center;width:22px;height:16px;border-radius:3px;overflow:hidden;background:var(--panel2);box-shadow:0 0 0 1px rgba(255,255,255,.16);vertical-align:-3px;flex:0 0 auto}
+.fl img{display:block;width:100%;height:100%;object-fit:cover}
+.fl b{display:none;font-family:Archivo,sans-serif;font-size:8.5px;line-height:1;letter-spacing:.2px;color:var(--ink)}
+.fl.broken img{display:none}
+.fl.broken b{display:block}
+.teamline{display:inline-flex;align-items:center;gap:7px;flex-wrap:wrap}
+.teamline .dash{color:var(--faint);font-family:Archivo,sans-serif;font-weight:900}
 .meta{display:flex;align-items:center;gap:8px;margin-top:7px;flex-wrap:wrap}
 .gb{font-family:Archivo,sans-serif;font-weight:800;font-size:10.5px;letter-spacing:.6px;border:1px solid var(--line);border-radius:6px;padding:2px 7px;color:var(--dim)}
 .city{font-size:11.5px;color:var(--faint)}
@@ -213,6 +219,16 @@ const TEAM_EN = {
   ARG:"Argentina", ALG:"Algeria", AUT:"Austria", JOR:"Jordan", POR:"Portugal", COD:"DR Congo", UZB:"Uzbekistan",
   COL:"Colombia", ENG:"England", CRO:"Croatia", GHA:"Ghana", PAN:"Panama"
 };
+const FLAG_CODES = {
+  MEX:"mx", RSA:"za", KOR:"kr", CZE:"cz", CAN:"ca", BIH:"ba",
+  QAT:"qa", SUI:"ch", BRA:"br", MAR:"ma", HAI:"ht", SCO:"gb-sct",
+  USA:"us", PAR:"py", AUS:"au", TUR:"tr", GER:"de", CUW:"cw",
+  CIV:"ci", ECU:"ec", NED:"nl", JPN:"jp", SWE:"se", TUN:"tn",
+  BEL:"be", EGY:"eg", IRN:"ir", NZL:"nz", ESP:"es", CPV:"cv",
+  KSA:"sa", URU:"uy", FRA:"fr", SEN:"sn", IRQ:"iq", NOR:"no",
+  ARG:"ar", ALG:"dz", AUT:"at", JOR:"jo", POR:"pt", COD:"cd",
+  UZB:"uz", COL:"co", ENG:"gb-eng", CRO:"hr", GHA:"gh", PAN:"pa"
+};
 const STORIES = {
   1:"მექსიკა 2026 წლის მსოფლიო ჩემპიონატის ერთ-ერთი მასპინძელი ქვეყანაა. სამხრეთ აფრიკა 2010 წლის მსოფლიო ჩემპიონატის მასპინძელი იყო. საინტერესო ფაქტია, რომ მექსიკა და სამხრეთ აფრიკა ერთმანეთს 2010 წლის მსოფლიო ჩემპიონატის გახსნით მატჩშიც შეხვდნენ — ის თამაში 1:1 დასრულდა. იმ შეხვედრაში სამხრეთ აფრიკელმა სიფივე ჩაბალალამ ტურნირის გახსნითი გოლი გაიტანა.",
   2:"სამხრეთ კორეა მსოფლიო ჩემპიონატების რეგულარული მონაწილეა და აზიური ფეხბურთის ერთ-ერთი ყველაზე სტაბილური ნაკრებია. სამხრეთ კორეამ 2002 წლის მსოფლიო ჩემპიონატზე ნახევარფინალში ითამაშა. ჩეხეთის ნაკრები დამოუკიდებელი ქვეყნის სახელით მუნდიალზე 2006 წელსაც მონაწილეობდა. ისტორიულად ჩეხოსლოვაკია მსოფლიო ჩემპიონატის ფინალში ორჯერ იყო გასული — 1934 და 1962 წლებში.",
@@ -301,6 +317,14 @@ const esc = s => String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"
 const norm = s => String(s||'').toLocaleLowerCase('ka-GE').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 
 function teamName(code){ return DATA.teams[code]?.[0] || code; }
+function flagLogo(code){
+  const flag = FLAG_CODES[code], name = teamName(code);
+  if(!flag) return `<span class="fl broken" aria-label="${esc(name)}"><b>${esc(code)}</b></span>`;
+  return `<span class="fl" aria-label="${esc(name)}"><img src="https://flagcdn.com/w40/${flag}.png" srcset="https://flagcdn.com/w80/${flag}.png 2x" alt="" loading="lazy" decoding="async" onerror="this.parentElement.classList.add('broken')"><b>${esc(code)}</b></span>`;
+}
+function teamLabel(code){ return `${flagLogo(code)}<span>${esc(teamName(code))}</span>`; }
+function teamRow(code){ return `<div class="trow">${teamLabel(code)}</div>`; }
+function teamLine(h,a){ return `<span class="teamline">${teamLabel(h)}<span class="dash">—</span>${teamLabel(a)}</span>`; }
 function matchDays(){ return [...new Set(DATA.matches.map(m=>m.md))].sort(); }
 function dateLabel(md){
   const d = P(`2026-${md}T12:00`);
@@ -345,8 +369,8 @@ function defaultStory(m){
 function openInfo(id){
   const m = DATA.matches.find(x=>x.id===id);
   if(!m) return;
-  const h = DATA.teams[m.h], a = DATA.teams[m.a], k = P(m.tb);
-  document.getElementById('infoTitle').textContent = `${h[1]} ${h[0]} — ${a[0]} ${a[1]}`;
+  const k = P(m.tb);
+  document.getElementById('infoTitle').innerHTML = teamLine(m.h,m.a);
   document.getElementById('infoSub').textContent = `ჯგ. ${m.g} · ${fmtD(k)}, ${fmtT(k)} · ${m.city}`;
   document.getElementById('infoBody').innerHTML = [
     ["ამბავი", STORIES[m.id] || defaultStory(m)],
@@ -420,16 +444,17 @@ function renderHero(){
   let h='';
   if(now < first){
     const ms = first-now, dd=Math.floor(ms/864e5), hh=Math.floor(ms%864e5/36e5), mm=Math.floor(ms%36e5/6e4);
+    const opener = DATA.matches[0];
     h = `<div class="lbl">გახსნამდე დარჩა</div>
          <div class="big">${dd}დ ${hh}სთ ${mm}წთ</div>
-         <div class="sub">${DATA.teams[DATA.matches[0].h][1]} ${DATA.teams[DATA.matches[0].h][0]} — ${DATA.teams[DATA.matches[0].a][0]} ${DATA.teams[DATA.matches[0].a][1]} · 11 ივნ 23:00, Estadio Azteca</div>`;
+         <div class="sub">${teamLine(opener.h,opener.a)} · 11 ივნ 23:00, Estadio Azteca</div>`;
   } else if(live.length){
     h = `<div class="lbl"><span class="pulse"></span>ახლა ეთერშია</div>` + live.map(m=>
-      `<div class="big">${DATA.teams[m.h][1]} ${DATA.teams[m.h][0]} — ${DATA.teams[m.a][0]} ${DATA.teams[m.a][1]}</div>
+      `<div class="big">${teamLine(m.h,m.a)}</div>
        <div class="sub">დაიწყო ${fmtT(P(m.tb))}-ზე · ${m.city}</div>`).join('');
   } else if(next){
     h = `<div class="lbl">შემდეგი მატჩი</div>
-         <div class="big">${DATA.teams[next.h][1]} ${DATA.teams[next.h][0]} — ${DATA.teams[next.a][0]} ${DATA.teams[next.a][1]}</div>
+         <div class="big">${teamLine(next.h,next.a)}</div>
          <div class="sub">${fmtD(P(next.tb))}, ${fmtT(P(next.tb))} · ${next.city}</div>`;
   } else {
     h = `<div class="lbl">ჯგუფური ეტაპი დასრულდა</div><div class="big">გმადლობთ, გუნდო! 🏆</div>`;
@@ -501,8 +526,8 @@ function render(){
         </div>
         <div>
           <div class="teams">
-            <div class="trow"><span class="fl">${DATA.teams[m.h][1]}</span>${DATA.teams[m.h][0]}</div>
-            <div class="trow"><span class="fl">${DATA.teams[m.a][1]}</span>${DATA.teams[m.a][0]}</div>
+            ${teamRow(m.h)}
+            ${teamRow(m.a)}
           </div>
           <div class="meta">${isLive?'<span class="livetag">● LIVE</span>':''}<span class="gb">ჯგ. ${m.g}</span><span class="city">${m.city} · ${m.stadium}</span></div>
           <div class="duty">${pills || '<span class="gap">⚠ ცვლა არ არის გაწერილი</span>'}${pills && !m.primary.length?'<span class="gap">⚠ დაწყებაზე არავინაა</span>':''}</div>

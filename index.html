@@ -50,17 +50,9 @@ body{background:var(--bg);color:var(--ink);font-family:"Noto Sans Georgian",syst
 .chip{flex:0 0 auto;padding:7px 13px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);color:var(--dim);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
 .chip.on{background:var(--ngt);border-color:var(--ngt);color:#0A1020}
 .chip.gsel{color:var(--ink)}
+.finishedToggle{font-size:12px;padding:7px 11px}
 .dateSel{min-width:146px}
 select.chip{appearance:none;-webkit-appearance:none;padding-right:26px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238E9CB8' stroke-width='1.6' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
-
-/* hero status */
-.hero{margin:8px 0 14px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(135deg,var(--panel),var(--panel2));padding:14px 16px}
-.hero .lbl{font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);font-weight:700}
-.hero .big{font-family:Archivo,sans-serif;font-weight:800;font-size:17px;margin-top:4px}
-.hero .sub{color:var(--dim);font-size:13px;margin-top:3px}
-.hero .crewnow{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
-.pulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--live);margin-right:7px;box-shadow:0 0 0 0 rgba(52,201,125,.6);animation:pl 1.6s infinite}
-@keyframes pl{70%{box-shadow:0 0 0 9px rgba(52,201,125,0)}100%{box-shadow:0 0 0 0 rgba(52,201,125,0)}}
 
 /* matchday section */
 .day{margin:22px 0 10px}
@@ -70,6 +62,12 @@ select.chip{appearance:none;-webkit-appearance:none;padding-right:26px;backgroun
 .dayhead .d{font-family:Archivo,sans-serif;font-weight:900;font-size:21px;letter-spacing:.4px}
 .dayhead .wd{color:var(--dim);font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.8px}
 .dayhead .mdtag{margin-left:auto;font-size:10px;color:var(--faint);letter-spacing:.6px;text-transform:uppercase}
+.dayPast{border:1px dashed var(--line);border-radius:12px;padding:10px 12px;background:rgba(14,22,38,.45)}
+.dayTools{margin-left:auto;display:flex;align-items:center;gap:8px}
+.dayTools .mdtag{margin-left:0}
+.dayToggle{border:1px solid var(--line);border-radius:999px;background:var(--panel2);color:var(--dim);font-family:inherit;font-size:10.5px;font-weight:800;padding:5px 9px;cursor:pointer;white-space:nowrap}
+.dayToggle:hover,.dayToggle:focus-visible{border-color:var(--ngt);color:var(--ink);outline:none}
+.pastNote{color:var(--dim);font-size:12px;font-weight:700}
 .crew{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .cw{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:8px;font-size:12.5px;font-weight:700;border:1px solid var(--line);background:var(--panel2)}
 .cw .dot{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
@@ -178,10 +176,10 @@ table.sched td .cell{display:block;width:100%;height:30px;line-height:30px;font-
       <select class="chip gsel" id="groupSel" onchange="state.group=this.value;render()">
         <option value="">ყველა ჯგუფი</option>
       </select>
+      <button class="chip finishedToggle" id="finishedToggle" type="button" onclick="toggleFinished()" aria-pressed="false">დასრულებულები</button>
     </div>
   </div>
 
-  <div class="hero" id="hero"></div>
   <div id="feed"></div>
   <div id="grid" style="display:none"></div>
 
@@ -218,7 +216,7 @@ const SHIFT_ORDER = ["midday","evening","night","morning"];
 const KA_WD = ["კვირა","ორშაბათი","სამშაბათი","ოთხშაბათი","ხუთშაბათი","პარასკევი","შაბათი"];
 const KA_MON = ["იან","თებ","მარ","აპრ","მაი","ივნ","ივლ","აგვ","სექ","ოქტ","ნოე","დეკ"];
 
-const state = {tab:'m', worker:null, group:'', query:'', jumpDate:''};
+const state = {tab:'m', worker:null, group:'', query:'', jumpDate:'', showFinished:false, openPastDays:{}};
 const TEAM_EN = {
   MEX:"Mexico", RSA:"South Africa", KOR:"South Korea", CZE:"Czech Republic", CAN:"Canada", BIH:"Bosnia & Herzegovina",
   QAT:"Qatar", SUI:"Switzerland", BRA:"Brazil", MAR:"Morocco", HAI:"Haiti", SCO:"Scotland", USA:"USA", PAR:"Paraguay",
@@ -325,6 +323,7 @@ const fmtD = d => `${d.getDate()} ${KA_MON[d.getMonth()]}`;
 const fmtT = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 const esc = s => String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const norm = s => String(s||'').toLocaleLowerCase('ka-GE').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const MATCH_DURATION = 125*6e4;
 
 function teamName(code){ return DATA.teams[code]?.[0] || code; }
 function flagLogo(code){
@@ -347,6 +346,8 @@ function dateLabel(md){
   const d = P(`2026-${md}T12:00`);
   return `${d.getDate()} ${KA_MON[d.getMonth()]} · ${KA_WD[d.getDay()]}`;
 }
+function matchEnd(m){ return new Date(P(m.tb).getTime()+MATCH_DURATION); }
+function isFinished(m, now){ return now >= matchEnd(m); }
 function searchText(m){
   const teams = [m.h,m.a].flatMap(c=>[c, teamName(c), TEAM_EN[c]]);
   const duty = m.on.flatMap(([w,s])=>[w, s, SH[s]?.ka, SH[s]?.time]);
@@ -364,20 +365,37 @@ function matchesSearch(m){
   if(group) return m.g.toLowerCase()===group[1];
   return q.split(/\s+/).every(part=>searchText(m).includes(part));
 }
-function updateSearchUi(visible,total){
+function updateSearchUi(visible,total,hiddenFinished=0){
   const input = document.getElementById('searchInput');
   const clear = document.getElementById('clearSearch');
   const count = document.getElementById('resultCount');
+  const finished = document.getElementById('finishedToggle');
   const hasQuery = !!state.query.trim();
   if(input && document.activeElement!==input && input.value!==state.query) input.value = state.query;
   clear?.classList.toggle('on', hasQuery);
   if(count) count.textContent = `${visible}/${total} მატჩი`;
+  if(finished){
+    finished.classList.toggle('on', state.showFinished);
+    finished.setAttribute('aria-pressed', state.showFinished ? 'true' : 'false');
+    finished.textContent = state.showFinished ? 'დასრულებულები ჩანს' : `დასრულებულები${hiddenFinished ? ` ${hiddenFinished}` : ''}`;
+    finished.title = state.showFinished ? 'დასრულებული მატჩების დამალვა' : 'დასრულებული მატჩების ჩვენება';
+  }
 }
 function setSearch(v){ state.query=v; render(); }
 function clearSearch(){
   state.query='';
   const input = document.getElementById('searchInput');
   if(input){ input.value=''; input.focus(); }
+  render();
+}
+function toggleFinished(){
+  state.showFinished = !state.showFinished;
+  if(!state.showFinished) state.openPastDays = {};
+  render();
+}
+function togglePastDay(md){
+  state.showFinished = true;
+  state.openPastDays[md] = !state.openPastDays[md];
   render();
 }
 function defaultStory(m){
@@ -439,69 +457,43 @@ function setTab(t){
   document.getElementById('jumpBtn').style.display = t==='m'?'':'none';
 }
 
-/* ---------- hero ---------- */
-function renderHero(){
-  const now = tbNow(), el = document.getElementById('hero');
-  const first = P(DATA.matches[0].tb);
-  const live = DATA.matches.filter(m=>{const k=P(m.tb);return now>=k && now < new Date(k.getTime()+125*6e4)});
-  const next = DATA.matches.find(m=>P(m.tb)>now);
-
-  // who is on duty right now (search yesterday + today matchday columns)
-  let duty=[];
-  const today = `${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
-  const yest = new Date(now.getTime()-864e5);
-  const ymd = `${pad(yest.getMonth()+1)}-${pad(yest.getDate())}`;
-  [ymd,today].forEach(md=>{
-    const W = dayWindows(md);
-    DATA.workers.forEach(w=>{
-      const s = DATA.shifts[w]?.[`2026-${md}`];
-      if(s && W[s] && now>=W[s][0] && now<W[s][1]) duty.push([w,s,W[s][1]]);
-    });
-  });
-
-  let h='';
-  if(now < first){
-    const ms = first-now, dd=Math.floor(ms/864e5), hh=Math.floor(ms%864e5/36e5), mm=Math.floor(ms%36e5/6e4);
-    const opener = DATA.matches[0];
-    h = `<div class="lbl">გახსნამდე დარჩა</div>
-         <div class="big">${dd}დ ${hh}სთ ${mm}წთ</div>
-         <div class="sub">${teamLine(opener.h,opener.a)} · 11 ივნ 23:00, Estadio Azteca</div>`;
-  } else if(live.length){
-    h = `<div class="lbl"><span class="pulse"></span>ახლა ეთერშია</div>` + live.map(m=>
-      `<div class="big">${teamLine(m.h,m.a)}</div>
-       <div class="sub">დაიწყო ${fmtT(P(m.tb))}-ზე · ${m.city}</div>`).join('');
-  } else if(next){
-    h = `<div class="lbl">შემდეგი მატჩი</div>
-         <div class="big">${teamLine(next.h,next.a)}</div>
-         <div class="sub">${fmtD(P(next.tb))}, ${fmtT(P(next.tb))} · ${next.city}</div>`;
-  } else {
-    h = `<div class="lbl">ჯგუფური ეტაპი დასრულდა</div><div class="big">გმადლობთ, გუნდო! 🏆</div>`;
-  }
-  if(duty.length){
-    h += `<div class="crewnow">${duty.map(([w,s,e])=>
-      `<span class="wp" style="background:${SH[s].color};color:${SH[s].txt}">${w}<small>${SH[s].ka} · ${fmtT(e)}-მდე</small></span>`).join('')}</div>`;
-  }
-  el.innerHTML = h;
-}
-
 /* ---------- match feed ---------- */
 function render(){
-  renderHero();
   const now = tbNow();
   const byDay = {};
   DATA.matches.forEach(m=>{ (byDay[m.md] ||= []).push(m); });
 
-  let html='', visible = 0;
+  let html='', visible = 0, hiddenFinished = 0;
   Object.keys(byDay).sort().forEach(md=>{
-    let ms = byDay[md];
+    const dayMatches = byDay[md];
+    const doneCount = dayMatches.filter(m=>isFinished(m, now)).length;
+    const dayDone = doneCount === dayMatches.length;
+    let ms = dayMatches;
     if(state.group) ms = ms.filter(m=>m.g===state.group);
     if(state.worker) ms = ms.filter(m=>m.on.some(([w])=>w===state.worker));
     if(state.query.trim()) ms = ms.filter(matchesSearch);
+    const beforeFinished = ms.length;
+    if(!state.showFinished) ms = ms.filter(m=>!isFinished(m, now));
+    hiddenFinished += beforeFinished - ms.length;
     const isJumpDate = state.jumpDate===md;
     if(!ms.length && !isJumpDate) return;
     visible += ms.length;
 
     const d = P(`2026-${md}T12:00`);
+    const isPastArchive = state.showFinished && dayDone;
+    const openPast = !isPastArchive || state.openPastDays[md] || isJumpDate;
+    const dayTools = isPastArchive
+      ? `<div class="dayTools"><span class="mdtag">${doneCount} დასრულებული</span><button class="dayToggle" type="button" onclick="togglePastDay('${md}')" aria-expanded="${openPast?'true':'false'}">${openPast?'დახურვა':'გახსნა'}</button></div>`
+      : `<span class="mdtag">მატჩდღე · ცხრილის სვეტი</span>`;
+
+    html += `<div class="day ${isPastArchive?'dayPast':''}" id="d${md}">
+      <div class="dayhead"><span class="d">${fmtD(d)}</span><span class="wd">${KA_WD[d.getDay()]}</span>${dayTools}</div>`;
+
+    if(isPastArchive && !openPast){
+      html += `<div class="pastNote">${ms.length} მატჩი მინიმიზებულია</div></div>`;
+      return;
+    }
+
     const W = dayWindows(md);
     const crew = SHIFT_ORDER.map(s=>{
       const w = DATA.workers.find(x=>DATA.shifts[x][`2026-${md}`]===s);
@@ -512,11 +504,9 @@ function render(){
     // rail segments (12:00 -> 10:00 = 22h)
     const t0 = W.midday[0].getTime(), span = 22*36e5;
     const seg = s=>{const[a,b]=W[s];return `<div class="seg" style="width:${(b-a)/span*100}%;background:${SH[s].color};opacity:${crew.some(c=>c.s===s)?1:.18}"></div>`};
-    const ticks = byDay[md].map(m=>`<div class="tick" style="left:${(P(m.tb).getTime()-t0)/span*100}%"></div>`).join('');
+    const ticks = dayMatches.map(m=>`<div class="tick" style="left:${(P(m.tb).getTime()-t0)/span*100}%"></div>`).join('');
 
-    html += `<div class="day" id="d${md}">
-      <div class="dayhead"><span class="d">${fmtD(d)}</span><span class="wd">${KA_WD[d.getDay()]}</span><span class="mdtag">მატჩდღე · ცხრილის სვეტი</span></div>
-      <div class="crew">${crew.map(({w,s})=>`<span class="cw ${state.worker===w?'me':''}"><span class="dot" style="background:${SH[s].color}"></span>${w}<small>${SH[s].ka} ${SH[s].time}</small></span>`).join('')}
+    html += `<div class="crew">${crew.map(({w,s})=>`<span class="cw ${state.worker===w?'me':''}"><span class="dot" style="background:${SH[s].color}"></span>${w}<small>${SH[s].ka} ${SH[s].time}</small></span>`).join('')}
         ${off.map(w=>`<span class="cw offc"><span class="dot" style="background:${SH.off.color}"></span>${w}<small>${SH.off.ka}</small></span>`).join('')}</div>
       <div class="rail">${SHIFT_ORDER.map(seg).join('')}${ticks}</div>
       <div class="railx"><span>12:00</span><span>19:00</span><span>02:00</span><span>06:00</span><span>10:00</span></div>`;
@@ -525,7 +515,7 @@ function render(){
       html += `<div class="empty dayEmpty">ამ თარიღზე არჩეული ფილტრით მატჩები არ ჩანს</div>`;
     }
     ms.forEach(m=>{
-      const k = P(m.tb), end = new Date(k.getTime()+125*6e4);
+      const k = P(m.tb), end = matchEnd(m);
       const isLive = now>=k && now<end, isDone = now>=end;
       const nextDay = k.getDate()!==d.getDate();
       const orderedOn = [...m.on].sort((a,b)=>{
@@ -559,7 +549,7 @@ function render(){
     ? `ძებნით „${esc(state.query.trim())}“ მატჩები ვერ მოიძებნა`
     : `ფილტრით მატჩები ვერ მოიძებნა`;
   document.getElementById('feed').innerHTML = html || `<div class="empty">${empty}</div>`;
-  updateSearchUi(visible, DATA.matches.length);
+  updateSearchUi(visible, DATA.matches.length, hiddenFinished);
 }
 
 /* ---------- grid tab ---------- */
@@ -588,6 +578,11 @@ function focusDay(d){
 function gotoDay(d){
   if(!d) return;
   state.jumpDate = d;
+  const dayMatches = DATA.matches.filter(m=>m.md===d);
+  if(dayMatches.length && dayMatches.every(m=>isFinished(m, tbNow()))){
+    state.showFinished = true;
+    state.openPastDays[d] = true;
+  }
   const ds = document.getElementById('dateSel');
   if(ds) ds.value = d;
   setTab('m');
@@ -611,8 +606,8 @@ function renderLegend(){
 function jumpToday(){
   const now = tbNow();
   const days = matchDays();
-  const today = `${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
-  const target = days.includes(today)?today:(days.find(d=>d>=today)||days[days.length-1]);
+  const next = DATA.matches.find(m=>!isFinished(m, now));
+  const target = next?.md || days[days.length-1];
   gotoDay(target);
 }
 function tickClock(){ document.getElementById('clock').textContent = fmtT(tbNow()); }

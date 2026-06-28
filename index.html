@@ -109,6 +109,8 @@ select.chip{appearance:none;-webkit-appearance:none;padding-right:26px;backgroun
 .wp{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12.5px;font-weight:800;color:#0A1020}
 .wp small{font-weight:600;font-size:10px;opacity:.75}
 .wp.sec{opacity:.78;outline:1px dashed rgba(255,255,255,.25);outline-offset:-1px}
+.wp.cont{opacity:1;border:1px solid rgba(234,240,251,.52);box-shadow:0 0 0 2px rgba(234,240,251,.10) inset,0 8px 18px rgba(0,0,0,.18);filter:saturate(1.08) brightness(1.04)}
+.wp.cont small{opacity:1;font-weight:900}
 .gap{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:800;background:rgba(255,176,46,.13);color:var(--warn);border:1px solid rgba(255,176,46,.45)}
 .contentis-mini{margin-left:auto;display:flex;align-items:center;gap:5px;flex-wrap:wrap;max-width:100%;padding:5px 7px;border:1px solid rgba(61,200,240,.34);border-radius:9px;background:rgba(61,200,240,.07);color:var(--dim);font-size:10.5px;font-weight:800;line-height:1}
 .contentis-mini .lbl{font-family:Archivo,sans-serif;font-size:9px;letter-spacing:.8px;color:var(--content)}
@@ -336,7 +338,7 @@ function matchEnd(m){ return new Date(P(m.tb).getTime()+MATCH_DURATION); }
 function isFinished(m, now){ return now >= matchEnd(m); }
 function searchText(m){
   const teams = [m.h,m.a].flatMap(c=>[c, teamName(c), TEAM_EN[c]]);
-  const duty = m.on.flatMap(([w,s])=>[w, s, SH[s]?.ka, SH[s]?.time]);
+  const duty = matchDuty(m).flatMap(({w,s,continues})=>[w, s, SH[s]?.ka, SH[s]?.time, continues?'აგრძელებს':'']);
   const contentis = (CONTENTIS_DUTY[m.id] || []).flatMap(([sub,w,at])=>[w, sub==="V"?"VIDEO":"CONTENT", at]);
   return norm([
     ...teams, ...duty, ...contentis, m.g, phaseLabel(m.g), m.city, m.stadium,
@@ -412,6 +414,33 @@ function dayWindows(md){
   const at=(base,h)=>{const x=new Date(base);x.setHours(h,0,0,0);return x};
   return {midday:[at(d,12),at(d,19)], evening:[at(d,19),at(nx,2)], night:[at(nx,2),at(nx,6)], morning:[at(nx,6),at(nx,10)]};
 }
+function shiftWorker(md, shift){
+  return DATA.workers.find(w=>DATA.shifts[w]?.[`2026-${md}`]===shift);
+}
+function matchDuty(m){
+  const W = dayWindows(m.md);
+  const start = P(m.tb), end = matchEnd(m);
+  const base = m.on.map(([w,s])=>({w,s,primary:m.primary.includes(w),continues:false}));
+  const seen = new Set(base.map(x=>x.w));
+  SHIFT_ORDER.forEach((s,i)=>{
+    const [a,b] = W[s];
+    if(start>=a && start<b && end>b){
+      SHIFT_ORDER.slice(i+1).some(ns=>{
+        const [na,nb] = W[ns];
+        if(end<=na) return true;
+        if(end>na){
+          const w = shiftWorker(m.md, ns);
+          if(w && !seen.has(w)){
+            seen.add(w);
+            base.push({w,s:ns,primary:false,continues:true});
+          }
+        }
+        return end<=nb;
+      });
+    }
+  });
+  return base;
+}
 
 /* ---------- controls ---------- */
 function buildControls(){
@@ -456,7 +485,7 @@ function render(){
     const dayDone = doneCount === dayMatches.length;
     let ms = dayMatches;
     if(state.group) ms = ms.filter(m=>m.g===state.group);
-    if(state.worker) ms = ms.filter(m=>m.on.some(([w])=>w===state.worker));
+    if(state.worker) ms = ms.filter(m=>matchDuty(m).some(({w})=>w===state.worker));
     if(state.query.trim()) ms = ms.filter(matchesSearch);
     const beforeFinished = ms.length;
     if(!state.showFinished) ms = ms.filter(m=>!isFinished(m, now));
@@ -504,13 +533,12 @@ function render(){
       const k = P(m.tb), end = matchEnd(m);
       const isLive = now>=k && now<end, isDone = now>=end;
       const nextDay = k.getDate()!==d.getDate();
-      const orderedOn = [...m.on].sort((a,b)=>{
-        const ap = m.primary.includes(a[0]), bp = m.primary.includes(b[0]);
-        return Number(bp) - Number(ap);
+      const orderedOn = matchDuty(m).sort((a,b)=>{
+        return Number(b.primary) - Number(a.primary);
       });
-      const pills = orderedOn.map(([w,s])=>{
-        const prim = m.primary.includes(w);
-        return `<span class="wp ${prim?'':'sec'}" style="background:${SH[s].color};color:${SH[s].txt}">${w}<small>${SH[s].ka}${prim?'':' · ბოლო ნაწილი'}</small></span>`;
+      const pills = orderedOn.map(({w,s,primary,continues})=>{
+        const note = continues ? ' · აგრძელებს' : primary ? '' : ' · ბოლო ნაწილი';
+        return `<span class="wp ${primary?'':'sec'} ${continues?'cont':''}" style="background:${SH[s].color};color:${SH[s].txt}">${w}<small>${SH[s].ka}${note}</small></span>`;
       }).join('');
       html += `<div class="match ${isLive?'live':''} ${isDone?'done':''}">
         <button class="infoBtn" type="button" onclick="openInfo(${m.id})" aria-label="მატჩის ინფორმაცია">i</button>

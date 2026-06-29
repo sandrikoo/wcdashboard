@@ -115,6 +115,11 @@ select.chip{appearance:none;-webkit-appearance:none;padding-right:26px;backgroun
 .wp.cont small{opacity:1;font-weight:900}
 .wp.vac{border:1px solid rgba(255,176,46,.75);box-shadow:0 0 0 2px rgba(255,176,46,.18) inset}
 .wp.vac small{opacity:1;font-weight:900}
+.coverPick{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:4px 7px;border:1px solid rgba(255,176,46,.55);border-radius:9px;background:rgba(255,176,46,.10);color:var(--ink);font-size:11px;font-weight:800}
+.coverPick label{font-family:Archivo,sans-serif;font-size:9px;letter-spacing:.7px;color:var(--warn)}
+.coverPick select{height:24px;max-width:130px;border:1px solid var(--line);border-radius:7px;background:var(--panel2);color:var(--ink);font-family:inherit;font-size:11px;font-weight:800;padding:0 20px 0 7px;outline:none}
+.coverPick select:focus{border-color:var(--warn);box-shadow:0 0 0 2px rgba(255,176,46,.16)}
+.coverPick .saved{color:var(--off);font-size:10px;font-weight:900}
 .gap{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:800;background:rgba(255,176,46,.13);color:var(--warn);border:1px solid rgba(255,176,46,.45)}
 .contentis-mini{margin-left:auto;display:flex;align-items:center;gap:5px;flex-wrap:wrap;max-width:100%;padding:5px 7px;border:1px solid rgba(61,200,240,.34);border-radius:9px;background:rgba(61,200,240,.07);color:var(--dim);font-size:10.5px;font-weight:800;line-height:1}
 .contentis-mini .lbl{font-family:Archivo,sans-serif;font-size:9px;letter-spacing:.8px;color:var(--content)}
@@ -224,6 +229,7 @@ const KA_MON = ["იან","თებ","მარ","აპრ","მაი","ი
 
 const state = {tab:'m', worker:null, group:'', query:'', jumpDate:'', showFinished:false, openPastDays:{}};
 const WORKER_NOTES = {Manti:{from:"2026-07-14", label:"14 ივლისიდან შვებულებაშია"}};
+const COVER_STORAGE_KEY = "wc26-cover-picks-v1";
 const TEAM_EN = {"MEX":"Mexico", "RSA":"South Africa", "KOR":"South Korea", "CZE":"Czech Republic", "CAN":"Canada", "BIH":"Bosnia & Herzegovina", "QAT":"Qatar", "SUI":"Switzerland", "BRA":"Brazil", "MAR":"Morocco", "HAI":"Haiti", "SCO":"Scotland", "USA":"USA", "PAR":"Paraguay", "AUS":"Australia", "TUR":"Türkiye", "GER":"Germany", "CUW":"Curaçao", "CIV":"Ivory Coast", "ECU":"Ecuador", "NED":"Netherlands", "JPN":"Japan", "SWE":"Sweden", "TUN":"Tunisia", "BEL":"Belgium", "EGY":"Egypt", "IRN":"Iran", "NZL":"New Zealand", "ESP":"Spain", "CPV":"Cape Verde", "KSA":"Saudi Arabia", "URU":"Uruguay", "FRA":"France", "SEN":"Senegal", "IRQ":"Iraq", "NOR":"Norway", "ARG":"Argentina", "ALG":"Algeria", "AUT":"Austria", "JOR":"Jordan", "POR":"Portugal", "COD":"DR Congo", "UZB":"Uzbekistan", "COL":"Colombia", "ENG":"England", "CRO":"Croatia", "GHA":"Ghana", "PAN":"Panama", "P79":"3rd Group C/E", "P80A":"Winner Group L", "P80B":"3rd Group I/J/K", "P82B":"3rd Group A/I/J", "P84B":"Runner-up Group J", "P83A":"Runner-up Group K", "P83B":"Runner-up Group L", "P85B":"3rd Group G/J", "P87A":"Winner Group K", "P87B":"3rd Group E/I/L", "W73":"Winner Match 73", "W74":"Winner Match 74", "W75":"Winner Match 75", "W76":"Winner Match 76", "W77":"Winner Match 77", "W78":"Winner Match 78", "W79":"Winner Match 79", "W80":"Winner Match 80", "W81":"Winner Match 81", "W82":"Winner Match 82", "W83":"Winner Match 83", "W84":"Winner Match 84", "W85":"Winner Match 85", "W86":"Winner Match 86", "W87":"Winner Match 87", "W88":"Winner Match 88", "W89":"Winner Match 89", "W90":"Winner Match 90", "W91":"Winner Match 91", "W92":"Winner Match 92", "W93":"Winner Match 93", "W94":"Winner Match 94", "W95":"Winner Match 95", "W96":"Winner Match 96", "W97":"Winner Match 97", "W98":"Winner Match 98", "W99":"Winner Match 99", "W100":"Winner Match 100", "W101":"Winner Match 101", "W102":"Winner Match 102", "W103":"Winner Match 103", "W104":"Winner Match 104", "L101":"Loser Match 101", "L102":"Loser Match 102"};
 const FLAG_CODES = {"MEX":"mx", "RSA":"za", "KOR":"kr", "CZE":"cz", "CAN":"ca", "BIH":"ba", "QAT":"qa", "SUI":"ch", "BRA":"br", "MAR":"ma", "HAI":"ht", "SCO":"gb-sct", "USA":"us", "PAR":"py", "AUS":"au", "TUR":"tr", "GER":"de", "CUW":"cw", "CIV":"ci", "ECU":"ec", "NED":"nl", "JPN":"jp", "SWE":"se", "TUN":"tn", "BEL":"be", "EGY":"eg", "IRN":"ir", "NZL":"nz", "ESP":"es", "CPV":"cv", "KSA":"sa", "URU":"uy", "FRA":"fr", "SEN":"sn", "IRQ":"iq", "NOR":"no", "ARG":"ar", "ALG":"dz", "AUT":"at", "JOR":"jo", "POR":"pt", "COD":"cd", "UZB":"uz", "COL":"co", "ENG":"gb-eng", "CRO":"hr", "GHA":"gh", "PAN":"pa"};
 const CONTENTIS_DUTY = {"1":[["C","ირაკლი"],["V","გაგუა"]],"2":[["C","ირაკლი"],["V","გაგუა"]],"3":[["C","დემბო"],["V","გიორგი"]],"4":[["C","დემბო"],["V","გიორგი"]],"5":[["C","ლუკა"],["V","ბოჭორა"]],"6":[["C","ლუკა"],["V","ბოჭორა"]],"7":[["C","ლუკა"],["V","ბოჭორა"]],"8":[["C","ლუკა"],["V","ბოჭორა"]],"9":[["C","დემბო"],["C","უზი","23:00"],["V","გიორგი"],["V","მიკა","23:00"]],"10":[["C","უზი"],["V","მიკა"]],"11":[["C","უზი"],["V","მიკა"]],"12":[["C","უზი"],["V","მიკა"]],"13":[["C","ლუკა"],["V","ბოჭორა"]],"14":[["C","ირაკლი"],["V","გაგუა"]],"15":[["C","ირაკლი"],["V","გაგუა"]],"16":[["C","ირაკლი"],["V","გაგუა"]],"17":[["C","დემბო"],["V","გიორგი"]],"18":[["C","დემბო"],["V","გიორგი"]],"19":[["C","დემბო"],["V","გიორგი"]],"20":[["C","დემბო"],["V","გიორგი"]],"21":[["C","ირაკლი"],["C","ლუკა","23:00"],["V","ბოჭორა","23:00"],["V","გაგუა"]],"22":[["C","ლუკა"],["V","ბოჭორა"]],"23":[["C","ლუკა"],["V","ბოჭორა"]],"24":[["C","ლუკა"],["V","ბოჭორა"]],"25":[["C","დემბო"],["V","მიკა"]],"26":[["C","უზი"],["V","გიორგი"]],"27":[["C","უზი"],["V","გიორგი"]],"28":[["C","უზი"],["V","გიორგი"]],"29":[["C","ირაკლი"],["V","მიკა"]],"30":[["C","ირაკლი"],["V","მიკა"]],"31":[["C","ირაკლი"],["V","მიკა"]],"32":[["C","ირაკლი"],["V","მიკა"]],"33":[["C","დემბო","23:00"],["C","უზი"],["V","ბოჭორა","23:00"],["V","გიორგი"]],"34":[["C","დემბო"],["V","ბოჭორა"]],"35":[["C","დემბო"],["V","ბოჭორა"]],"36":[["C","დემბო"],["V","ბოჭორა"]],"37":[["C","ირაკლი"],["V","გაგუა"]],"38":[["C","ლუკა"],["V","გიორგი"]],"39":[["C","ლუკა"],["V","გიორგი"]],"40":[["C","ლუკა"],["V","გიორგი"]],"41":[["C","დემბო"],["C","უზი","23:00"],["V","ბოჭორა"],["V","მიკა","23:00"]],"42":[["C","უზი"],["V","მიკა"]],"43":[["C","უზი"],["V","მიკა"]],"44":[["C","უზი"],["V","მიკა"]],"45":[["C","ირაკლი","23:00"],["C","ლუკა"],["V","ბოჭორა","23:00"],["V","გაგუა"]],"46":[["C","ირაკლი"],["V","ბოჭორა"]],"47":[["C","ირაკლი"],["V","ბოჭორა"]],"48":[["C","ირაკლი"],["V","ბოჭორა"]],"49":[["C","დემბო"],["V","მიკა"]],"50":[["C","დემბო"],["V","მიკა"]],"51":[["C","დემბო"],["V","მიკა"]],"52":[["C","დემბო"],["V","მიკა"]],"53":[["C","დემბო"],["V","მიკა"]],"54":[["C","დემბო"],["V","მიკა"]],"55":[["C","უზი"],["V","გაგუა"]],"56":[["C","უზი"],["V","გაგუა"]],"57":[["C","უზი"],["V","გაგუა"]],"58":[["C","უზი"],["V","გაგუა"]],"59":[["C","უზი"],["V","გაგუა"]],"60":[["C","უზი"],["V","გაგუა"]],"61":[["C","ლუკა"],["V","გიორგი"]],"62":[["C","ლუკა"],["V","გიორგი"]],"63":[["C","ლუკა"],["V","გიორგი"]],"64":[["C","ლუკა"],["V","გიორგი"]],"65":[["C","ლუკა"],["V","გიორგი"]],"66":[["C","ლუკა"],["V","გიორგი"]],"67":[["C","დემბო"],["V","გაგუა"]],"68":[["C","დემბო"],["V","გაგუა"]],"69":[["C","დემბო"],["V","გაგუა"]],"70":[["C","დემბო"],["V","გაგუა"]],"71":[["C","დემბო"],["V","გაგუა"]],"72":[["C","დემბო"],["V","გაგუა"]]};
@@ -341,6 +347,41 @@ function dateLabel(md){
 }
 function matchEnd(m){ return new Date(P(m.tb).getTime()+MATCH_DURATION); }
 function isFinished(m, now){ return now >= matchEnd(m); }
+function readCoverStore(){
+  try{
+    const saved = window.localStorage?.getItem(COVER_STORAGE_KEY);
+    if(saved) return saved;
+  }catch(e){}
+  const found = String(document.cookie || '').split('; ').find(x=>x.startsWith(`${COVER_STORAGE_KEY}=`));
+  return found ? decodeURIComponent(found.split('=').slice(1).join('=')) : '{}';
+}
+function writeCoverStore(picks){
+  const saved = JSON.stringify(picks);
+  try{ window.localStorage?.setItem(COVER_STORAGE_KEY, saved); }catch(e){}
+  try{ document.cookie = `${COVER_STORAGE_KEY}=${encodeURIComponent(saved)};max-age=31536000;path=/;SameSite=Lax`; }catch(e){}
+}
+function coverPicks(){
+  try{ return JSON.parse(readCoverStore()); }
+  catch(e){ return {}; }
+}
+function coverPickKey(id){ return `match-${id}`; }
+function coverPick(id){ return coverPicks()[coverPickKey(id)] || ''; }
+function saveCoverPick(id, value){
+  const picks = coverPicks();
+  if(value) picks[coverPickKey(id)] = value;
+  else delete picks[coverPickKey(id)];
+  writeCoverStore(picks);
+  render();
+}
+function coverPicker(m){
+  const needsCover = matchDuty(m).some(({w})=>w==='Manti' && workerNote(w,m.md));
+  if(!needsCover) return '';
+  const selected = coverPick(m.id);
+  const opts = [''].concat(DATA.workers.filter(w=>w!=='Manti')).map(w=>
+    `<option value="${esc(w)}" ${selected===w?'selected':''}>${w || 'აირჩიე'}</option>`
+  ).join('');
+  return `<span class="coverPick"><label>შემცვლელი</label><select onchange="saveCoverPick(${m.id},this.value)" aria-label="Manti-ს შემცვლელი">${opts}</select>${selected?'<span class="saved">შენახულია</span>':''}</span>`;
+}
 function workerNote(w, md){
   const note = WORKER_NOTES[w];
   if(!note) return '';
@@ -350,7 +391,7 @@ function workerNote(w, md){
 }
 function searchText(m){
   const teams = [m.h,m.a].flatMap(c=>[c, teamName(c), TEAM_EN[c]]);
-  const duty = matchDuty(m).flatMap(({w,s,continues})=>[w, s, SH[s]?.ka, SH[s]?.time, continues?'აგრძელებს':'', workerNote(w,m.md)]);
+  const duty = matchDuty(m).flatMap(({w,s,continues})=>[w, s, SH[s]?.ka, SH[s]?.time, continues?'აგრძელებს':'', workerNote(w,m.md), coverPick(m.id)]);
   const contentis = (CONTENTIS_DUTY[m.id] || []).flatMap(([sub,w,at])=>[w, sub==="V"?"VIDEO":"CONTENT", at]);
   return norm([
     ...teams, ...duty, ...contentis, m.g, phaseLabel(m.g), m.city, m.stadium,
@@ -571,7 +612,7 @@ function render(){
             ${teamRow(m.a)}
           </div>
           <div class="meta">${isLive?'<span class="livetag">● LIVE</span>':''}<span class="gb">${phaseLabel(m.g)}</span><span class="city">${m.city} · ${m.stadium}</span></div>
-          <div class="duty">${pills || '<span class="gap">⚠ ცვლა არ არის გაწერილი</span>'}${pills && !m.primary.length?'<span class="gap">⚠ დაწყებაზე არავინაა</span>':''}${contentisBadge(m.id)}</div>
+          <div class="duty">${pills || '<span class="gap">⚠ ცვლა არ არის გაწერილი</span>'}${pills && !m.primary.length?'<span class="gap">⚠ დაწყებაზე არავინაა</span>':''}${coverPicker(m)}${contentisBadge(m.id)}</div>
         </div>
       </div>`;
     });

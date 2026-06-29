@@ -121,14 +121,16 @@ async function fetchApi(pathname, params) {
     const text = await res.text();
     if (res.status === 401 || res.status === 403) {
       console.log(`TheStatsAPI is not ready for automatic updates yet (${res.status}). Check the API key subscription plan in the dashboard.`);
-      return [];
+      return { rows: [], totalPages: 1 };
     }
     throw new Error(`API request failed ${res.status}: ${text}`);
   }
   const body = await res.json();
   if (Array.isArray(body.errors) && body.errors.length) throw new Error(`API returned errors: ${body.errors.join(", ")}`);
   if (body.errors && Object.keys(body.errors).length) throw new Error(`API returned errors: ${JSON.stringify(body.errors)}`);
-  return body.data || body.response || [];
+  const rows = body.data || body.response || [];
+  const totalPages = body.meta?.total_pages || body.pagination?.total_pages || body.total_pages || 1;
+  return { rows, totalPages };
 }
 
 function fixtureMatchesTeams(fixture, match) {
@@ -143,14 +145,15 @@ function fixtureMatchesTeams(fixture, match) {
 async function fetchWorldCupFixtures() {
   const all = [];
   for (let page = 1; page <= 3; page += 1) {
-    const rows = await fetchApi("/football/matches", {
+    const result = await fetchApi("/football/matches", {
       competition_id: COMPETITION_ID,
       season_id: SEASON_ID,
       per_page: 100,
       page
     });
+    const rows = result.rows;
     all.push(...rows);
-    if (rows.length < 100) break;
+    if (rows.length < 100 || page >= result.totalPages) break;
   }
   return all;
 }

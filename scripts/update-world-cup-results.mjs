@@ -117,7 +117,14 @@ async function fetchApi(pathname, params) {
   const url = new URL(`${API_BASE}${pathname}`);
   Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, String(value)));
   const res = await fetch(url, { headers: { Authorization: `Bearer ${API_KEY}` } });
-  if (!res.ok) throw new Error(`API request failed ${res.status}: ${await res.text()}`);
+  if (!res.ok) {
+    const text = await res.text();
+    if (res.status === 401 || res.status === 403) {
+      console.log(`TheStatsAPI is not ready for automatic updates yet (${res.status}). Check the API key subscription plan in the dashboard.`);
+      return [];
+    }
+    throw new Error(`API request failed ${res.status}: ${text}`);
+  }
   const body = await res.json();
   if (Array.isArray(body.errors) && body.errors.length) throw new Error(`API returned errors: ${body.errors.join(", ")}`);
   if (body.errors && Object.keys(body.errors).length) throw new Error(`API returned errors: ${JSON.stringify(body.errors)}`);

@@ -28,9 +28,9 @@ jobs:
 
       - name: Update bracket slots
         env:
-          API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
-          API_FOOTBALL_LEAGUE_ID: "1"
-          API_FOOTBALL_SEASON: "2026"
+          THESTATSAPI_KEY: ${{ secrets.THESTATSAPI_KEY }}
+          THESTATSAPI_COMPETITION_ID: "comp_6107"
+          THESTATSAPI_SEASON_ID: "sn_118868"
           RESULT_CHECK_BUFFER_MINUTES: "10"
         run: node scripts/update-world-cup-results.mjs
 

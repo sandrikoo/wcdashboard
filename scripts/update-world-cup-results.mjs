@@ -5,10 +5,10 @@ import { fileURLToPath } from "node:url";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const INDEX_FILE = path.join(ROOT, "index.html");
 const MAP_FILE = path.join(ROOT, "scripts", "world-cup-fixture-map.json");
-const API_BASE = "https://v3.football.api-sports.io";
-const API_KEY = process.env.API_FOOTBALL_KEY || "";
-const LEAGUE_ID = process.env.API_FOOTBALL_LEAGUE_ID || "1";
-const SEASON = process.env.API_FOOTBALL_SEASON || "2026";
+const API_BASE = "https://api.thestatsapi.com/api";
+const API_KEY = process.env.THESTATSAPI_KEY || process.env.API_FOOTBALL_KEY || "";
+const COMPETITION_ID = process.env.THESTATSAPI_COMPETITION_ID || "comp_6107";
+const SEASON_ID = process.env.THESTATSAPI_SEASON_ID || "sn_118868";
 const DRY_RUN = process.argv.includes("--dry-run");
 const MATCH_DURATION_MS = 125 * 60 * 1000;
 const CHECK_BUFFER_MS = Number(process.env.RESULT_CHECK_BUFFER_MINUTES || 10) * 60 * 1000;
@@ -35,7 +35,7 @@ const NAME_ALIASES = {
 
 const REAL_TEAM = /^[A-Z]{3}$/;
 const SLOT_TEAM = /^(?:W|L|P)\d+[A-Z]?$/;
-const FINISHED = new Set(["FT", "AET", "PEN"]);
+const FINISHED = new Set(["finished", "ft", "aet", "pen"]);
 
 function extractConstObject(source, name) {
   const marker = `const ${name} = `;
@@ -113,15 +113,15 @@ function candidateDates(match) {
 }
 
 async function fetchApi(pathname, params) {
-  if (!API_KEY) throw new Error("Missing API_FOOTBALL_KEY GitHub secret.");
+  if (!API_KEY) throw new Error("Missing THESTATSAPI_KEY GitHub secret.");
   const url = new URL(`${API_BASE}${pathname}`);
   Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, String(value)));
-  const res = await fetch(url, { headers: { "x-apisports-key": API_KEY } });
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${API_KEY}` } });
   if (!res.ok) throw new Error(`API request failed ${res.status}: ${await res.text()}`);
   const body = await res.json();
   if (Array.isArray(body.errors) && body.errors.length) throw new Error(`API returned errors: ${body.errors.join(", ")}`);
   if (body.errors && Object.keys(body.errors).length) throw new Error(`API returned errors: ${JSON.stringify(body.errors)}`);
-  return body.response || [];
+  return body.data || body.response || [];
 }
 
 function fixtureMatchesTeams(fixture, match) {
@@ -133,41 +133,47 @@ function fixtureMatchesTeams(fixture, match) {
   return direct || reversed;
 }
 
-async function findFixture(match, fixtureMap, dateCache) {
+async function fetchWorldCupFixtures() {
+  const all = [];
+  for (let page = 1; page <= 3; page += 1) {
+    const rows = await fetchApi("/football/matches", {
+      competition_id: COMPETITION_ID,
+      season_id: SEASON_ID,
+      per_page: 100,
+      page
+    });
+    all.push(...rows);
+    if (rows.length < 100) break;
+  }
+  return all;
+}
+
+async function findFixture(match, fixtureMap, fixtures) {
   const mappedId = fixtureMap[String(match.id)];
-  if (mappedId) {
-    const fixtures = await fetchApi("/fixtures", { id: mappedId });
-    return fixtures[0] || null;
-  }
-  for (const date of candidateDates(match)) {
-    if (!dateCache.has(date)) {
-      const fixtures = await fetchApi("/fixtures", { league: LEAGUE_ID, season: SEASON, date });
-      dateCache.set(date, fixtures);
-    }
-    const found = dateCache.get(date).find(fixture => fixtureMatchesTeams(fixture, match));
-    if (found) return found;
-  }
-  return null;
+  if (mappedId) return fixtures.find(fixture => fixture.match_id === mappedId) || null;
+  return fixtures.find(fixture => Number(fixture.match_number) === Number(match.id))
+    || fixtures.find(fixture => fixtureMatchesTeams(fixture, match))
+    || null;
 }
 
 function finishedWinnerCodes(match, fixture) {
-  const status = fixture?.fixture?.status?.short;
+  const status = String(fixture?.status || fixture?.fixture?.status?.short || "").toLowerCase();
   if (!FINISHED.has(status)) return null;
-  const homeWinner = fixture?.teams?.home?.winner;
-  const awayWinner = fixture?.teams?.away?.winner;
+  const homeWinner = fixture?.home?.winner ?? fixture?.teams?.home?.winner;
+  const awayWinner = fixture?.away?.winner ?? fixture?.teams?.away?.winner;
   if (homeWinner === true) return { winner: match.h, loser: match.a, status };
   if (awayWinner === true) return { winner: match.a, loser: match.h, status };
 
-  const homePenalty = fixture?.score?.penalty?.home;
-  const awayPenalty = fixture?.score?.penalty?.away;
+  const homePenalty = Number(fixture?.home?.penalty_score ?? fixture?.home?.penalties ?? fixture?.score?.penalty?.home);
+  const awayPenalty = Number(fixture?.away?.penalty_score ?? fixture?.away?.penalties ?? fixture?.score?.penalty?.away);
   if (Number.isFinite(homePenalty) && Number.isFinite(awayPenalty) && homePenalty !== awayPenalty) {
     return homePenalty > awayPenalty
       ? { winner: match.h, loser: match.a, status }
       : { winner: match.a, loser: match.h, status };
   }
 
-  const homeGoals = fixture?.goals?.home;
-  const awayGoals = fixture?.goals?.away;
+  const homeGoals = Number(fixture?.home?.score ?? fixture?.goals?.home);
+  const awayGoals = Number(fixture?.away?.score ?? fixture?.goals?.away);
   if (Number.isFinite(homeGoals) && Number.isFinite(awayGoals) && homeGoals !== awayGoals) {
     return homeGoals > awayGoals
       ? { winner: match.h, loser: match.a, status }
@@ -200,9 +206,9 @@ async function main() {
   const fixtureMap = fs.existsSync(MAP_FILE) ? JSON.parse(fs.readFileSync(MAP_FILE, "utf8")) : {};
   const now = process.env.RESULT_CHECK_NOW ? new Date(process.env.RESULT_CHECK_NOW) : new Date();
   const beforeSlots = unresolvedSlots(data);
-  const dateCache = new Map();
   let resolved = 0;
   let checked = 0;
+  let fixtures = null;
 
   for (const match of data.matches) {
     if (!isRealMatch(match) || !isDue(match, now)) continue;
@@ -210,7 +216,8 @@ async function main() {
     if (!hasDownstreamSlot) continue;
     checked += 1;
     if (DRY_RUN) continue;
-    const fixture = await findFixture(match, fixtureMap, dateCache);
+    fixtures ||= await fetchWorldCupFixtures();
+    const fixture = await findFixture(match, fixtureMap, fixtures);
     if (!fixture) {
       console.log(`No API fixture found for match ${match.id} ${match.h}-${match.a}`);
       continue;

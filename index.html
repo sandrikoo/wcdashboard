@@ -230,6 +230,11 @@ const KA_MON = ["იან","თებ","მარ","აპრ","მაი","ი
 const state = {tab:'m', worker:null, group:'', query:'', jumpDate:'', showFinished:false, openPastDays:{}};
 const WORKER_NOTES = {Manti:{from:"2026-07-14", label:"შვებულებაშია"}};
 const COVER_STORAGE_KEY = "wc26-cover-picks-v1";
+const COVER_CHANNEL_KEY = "wc26-cover-picks-sync";
+const coverChannel = (()=>{
+  try{ return "BroadcastChannel" in window ? new BroadcastChannel(COVER_CHANNEL_KEY) : null; }
+  catch(e){ return null; }
+})();
 const TEAM_EN = {"MEX":"Mexico", "RSA":"South Africa", "KOR":"South Korea", "CZE":"Czech Republic", "CAN":"Canada", "BIH":"Bosnia & Herzegovina", "QAT":"Qatar", "SUI":"Switzerland", "BRA":"Brazil", "MAR":"Morocco", "HAI":"Haiti", "SCO":"Scotland", "USA":"USA", "PAR":"Paraguay", "AUS":"Australia", "TUR":"Türkiye", "GER":"Germany", "CUW":"Curaçao", "CIV":"Ivory Coast", "ECU":"Ecuador", "NED":"Netherlands", "JPN":"Japan", "SWE":"Sweden", "TUN":"Tunisia", "BEL":"Belgium", "EGY":"Egypt", "IRN":"Iran", "NZL":"New Zealand", "ESP":"Spain", "CPV":"Cape Verde", "KSA":"Saudi Arabia", "URU":"Uruguay", "FRA":"France", "SEN":"Senegal", "IRQ":"Iraq", "NOR":"Norway", "ARG":"Argentina", "ALG":"Algeria", "AUT":"Austria", "JOR":"Jordan", "POR":"Portugal", "COD":"DR Congo", "UZB":"Uzbekistan", "COL":"Colombia", "ENG":"England", "CRO":"Croatia", "GHA":"Ghana", "PAN":"Panama", "P79":"3rd Group C/E", "P80A":"Winner Group L", "P80B":"3rd Group I/J/K", "P82B":"3rd Group A/I/J", "P84B":"Runner-up Group J", "P83A":"Runner-up Group K", "P83B":"Runner-up Group L", "P85B":"3rd Group G/J", "P87A":"Winner Group K", "P87B":"3rd Group E/I/L", "W73":"Winner Match 73", "W74":"Winner Match 74", "W75":"Winner Match 75", "W76":"Winner Match 76", "W77":"Winner Match 77", "W78":"Winner Match 78", "W79":"Winner Match 79", "W80":"Winner Match 80", "W81":"Winner Match 81", "W82":"Winner Match 82", "W83":"Winner Match 83", "W84":"Winner Match 84", "W85":"Winner Match 85", "W86":"Winner Match 86", "W87":"Winner Match 87", "W88":"Winner Match 88", "W89":"Winner Match 89", "W90":"Winner Match 90", "W91":"Winner Match 91", "W92":"Winner Match 92", "W93":"Winner Match 93", "W94":"Winner Match 94", "W95":"Winner Match 95", "W96":"Winner Match 96", "W97":"Winner Match 97", "W98":"Winner Match 98", "W99":"Winner Match 99", "W100":"Winner Match 100", "W101":"Winner Match 101", "W102":"Winner Match 102", "W103":"Winner Match 103", "W104":"Winner Match 104", "L101":"Loser Match 101", "L102":"Loser Match 102"};
 const FLAG_CODES = {"MEX":"mx", "RSA":"za", "KOR":"kr", "CZE":"cz", "CAN":"ca", "BIH":"ba", "QAT":"qa", "SUI":"ch", "BRA":"br", "MAR":"ma", "HAI":"ht", "SCO":"gb-sct", "USA":"us", "PAR":"py", "AUS":"au", "TUR":"tr", "GER":"de", "CUW":"cw", "CIV":"ci", "ECU":"ec", "NED":"nl", "JPN":"jp", "SWE":"se", "TUN":"tn", "BEL":"be", "EGY":"eg", "IRN":"ir", "NZL":"nz", "ESP":"es", "CPV":"cv", "KSA":"sa", "URU":"uy", "FRA":"fr", "SEN":"sn", "IRQ":"iq", "NOR":"no", "ARG":"ar", "ALG":"dz", "AUT":"at", "JOR":"jo", "POR":"pt", "COD":"cd", "UZB":"uz", "COL":"co", "ENG":"gb-eng", "CRO":"hr", "GHA":"gh", "PAN":"pa"};
 const CONTENTIS_DUTY = {"1":[["C","ირაკლი"],["V","გაგუა"]],"2":[["C","ირაკლი"],["V","გაგუა"]],"3":[["C","დემბო"],["V","გიორგი"]],"4":[["C","დემბო"],["V","გიორგი"]],"5":[["C","ლუკა"],["V","ბოჭორა"]],"6":[["C","ლუკა"],["V","ბოჭორა"]],"7":[["C","ლუკა"],["V","ბოჭორა"]],"8":[["C","ლუკა"],["V","ბოჭორა"]],"9":[["C","დემბო"],["C","უზი","23:00"],["V","გიორგი"],["V","მიკა","23:00"]],"10":[["C","უზი"],["V","მიკა"]],"11":[["C","უზი"],["V","მიკა"]],"12":[["C","უზი"],["V","მიკა"]],"13":[["C","ლუკა"],["V","ბოჭორა"]],"14":[["C","ირაკლი"],["V","გაგუა"]],"15":[["C","ირაკლი"],["V","გაგუა"]],"16":[["C","ირაკლი"],["V","გაგუა"]],"17":[["C","დემბო"],["V","გიორგი"]],"18":[["C","დემბო"],["V","გიორგი"]],"19":[["C","დემბო"],["V","გიორგი"]],"20":[["C","დემბო"],["V","გიორგი"]],"21":[["C","ირაკლი"],["C","ლუკა","23:00"],["V","ბოჭორა","23:00"],["V","გაგუა"]],"22":[["C","ლუკა"],["V","ბოჭორა"]],"23":[["C","ლუკა"],["V","ბოჭორა"]],"24":[["C","ლუკა"],["V","ბოჭორა"]],"25":[["C","დემბო"],["V","მიკა"]],"26":[["C","უზი"],["V","გიორგი"]],"27":[["C","უზი"],["V","გიორგი"]],"28":[["C","უზი"],["V","გიორგი"]],"29":[["C","ირაკლი"],["V","მიკა"]],"30":[["C","ირაკლი"],["V","მიკა"]],"31":[["C","ირაკლი"],["V","მიკა"]],"32":[["C","ირაკლი"],["V","მიკა"]],"33":[["C","დემბო","23:00"],["C","უზი"],["V","ბოჭორა","23:00"],["V","გიორგი"]],"34":[["C","დემბო"],["V","ბოჭორა"]],"35":[["C","დემბო"],["V","ბოჭორა"]],"36":[["C","დემბო"],["V","ბოჭორა"]],"37":[["C","ირაკლი"],["V","გაგუა"]],"38":[["C","ლუკა"],["V","გიორგი"]],"39":[["C","ლუკა"],["V","გიორგი"]],"40":[["C","ლუკა"],["V","გიორგი"]],"41":[["C","დემბო"],["C","უზი","23:00"],["V","ბოჭორა"],["V","მიკა","23:00"]],"42":[["C","უზი"],["V","მიკა"]],"43":[["C","უზი"],["V","მიკა"]],"44":[["C","უზი"],["V","მიკა"]],"45":[["C","ირაკლი","23:00"],["C","ლუკა"],["V","ბოჭორა","23:00"],["V","გაგუა"]],"46":[["C","ირაკლი"],["V","ბოჭორა"]],"47":[["C","ირაკლი"],["V","ბოჭორა"]],"48":[["C","ირაკლი"],["V","ბოჭორა"]],"49":[["C","დემბო"],["V","მიკა"]],"50":[["C","დემბო"],["V","მიკა"]],"51":[["C","დემბო"],["V","მიკა"]],"52":[["C","დემბო"],["V","მიკა"]],"53":[["C","დემბო"],["V","მიკა"]],"54":[["C","დემბო"],["V","მიკა"]],"55":[["C","უზი"],["V","გაგუა"]],"56":[["C","უზი"],["V","გაგუა"]],"57":[["C","უზი"],["V","გაგუა"]],"58":[["C","უზი"],["V","გაგუა"]],"59":[["C","უზი"],["V","გაგუა"]],"60":[["C","უზი"],["V","გაგუა"]],"61":[["C","ლუკა"],["V","გიორგი"]],"62":[["C","ლუკა"],["V","გიორგი"]],"63":[["C","ლუკა"],["V","გიორგი"]],"64":[["C","ლუკა"],["V","გიორგი"]],"65":[["C","ლუკა"],["V","გიორგი"]],"66":[["C","ლუკა"],["V","გიორგი"]],"67":[["C","დემბო"],["V","გაგუა"]],"68":[["C","დემბო"],["V","გაგუა"]],"69":[["C","დემბო"],["V","გაგუა"]],"70":[["C","დემბო"],["V","გაგუა"]],"71":[["C","დემბო"],["V","გაგუა"]],"72":[["C","დემბო"],["V","გაგუა"]]};
@@ -360,6 +365,9 @@ function writeCoverStore(picks){
   try{ window.localStorage?.setItem(COVER_STORAGE_KEY, saved); }catch(e){}
   try{ document.cookie = `${COVER_STORAGE_KEY}=${encodeURIComponent(saved)};max-age=31536000;path=/;SameSite=Lax`; }catch(e){}
 }
+function announceCoverChange(){
+  try{ coverChannel?.postMessage({type:"cover-picks-updated"}); }catch(e){}
+}
 function coverPicks(){
   try{ return JSON.parse(readCoverStore()); }
   catch(e){ return {}; }
@@ -371,6 +379,7 @@ function saveCoverPick(id, value){
   if(value) picks[coverPickKey(id)] = value;
   else delete picks[coverPickKey(id)];
   writeCoverStore(picks);
+  announceCoverChange();
   render();
 }
 function coverPicker(m){
@@ -692,6 +701,10 @@ function tickClock(){ document.getElementById('clock').textContent = fmtT(tbNow(
 buildControls(); renderLegend(); render(); renderGrid(); tickClock();
 document.getElementById('jumpBtn').style.display='';
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeInfo(); });
+window.addEventListener('storage', e=>{ if(e.key===COVER_STORAGE_KEY) render(); });
+coverChannel?.addEventListener('message', e=>{
+  if(e.data?.type==="cover-picks-updated") render();
+});
 setInterval(tickClock, 10e3);
 setInterval(render, 6e4);
 </script>

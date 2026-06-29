@@ -83,8 +83,8 @@ function namesForCode(code) {
 
 function fixtureTeamNames(fixture) {
   return [
-    normalizeName(fixture?.teams?.home?.name),
-    normalizeName(fixture?.teams?.away?.name)
+    normalizeName(fixture?.home?.name || fixture?.home_team?.name || fixture?.teams?.home?.name),
+    normalizeName(fixture?.away?.name || fixture?.away_team?.name || fixture?.teams?.away?.name)
   ];
 }
 
@@ -166,6 +166,18 @@ async function findFixture(match, fixtureMap, fixtures) {
     || null;
 }
 
+function fixturePreview(fixture) {
+  const names = fixtureTeamNames(fixture);
+  return {
+    id: fixture.match_id || fixture.id,
+    number: fixture.match_number,
+    status: fixture.status,
+    home: names[0],
+    away: names[1],
+    kickoff: fixture.start_time || fixture.date || fixture.kickoff
+  };
+}
+
 function finishedWinnerCodes(match, fixture) {
   const status = String(fixture?.status || fixture?.fixture?.status?.short || "").toLowerCase();
   if (!FINISHED.has(status)) return null;
@@ -230,6 +242,7 @@ async function main() {
     const fixture = await findFixture(match, fixtureMap, fixtures);
     if (!fixture) {
       console.log(`No API fixture found for match ${match.id} ${match.h}-${match.a}`);
+      console.log(`API fixture sample: ${JSON.stringify(fixtures.slice(0, 8).map(fixturePreview))}`);
       continue;
     }
     const result = finishedWinnerCodes(match, fixture);

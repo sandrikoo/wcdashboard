@@ -229,6 +229,7 @@ const KA_MON = ["იან","თებ","მარ","აპრ","მაი","ი
 
 const state = {tab:'m', worker:null, group:'', query:'', jumpDate:'', showFinished:false, openPastDays:{}};
 const WORKER_NOTES = {};
+const GENERAL_NOTES = [{text:"Manti: შვებულებაშია"}];
 const COVER_STORAGE_KEY = "wc26-cover-picks-v1";
 const COVER_CHANNEL_KEY = "wc26-cover-picks-sync";
 const coverChannel = (()=>{
@@ -699,8 +700,8 @@ function jumpToDate(d){
 function renderLegend(){
   const shifts = Object.entries(SH).map(([k,v])=>
     `<span class="lg"><span class="dot" style="background:${v.color}"></span>${v.ka}${v.time?' '+v.time:''}</span>`).join('');
-  const notes = Object.entries(WORKER_NOTES).map(([w,n])=>
-    `<span class="lg"><span class="dot" style="background:var(--warn)"></span>${w}: ${n.label}</span>`).join('');
+  const notes = GENERAL_NOTES.map(n=>
+    `<span class="lg"><span class="dot" style="background:var(--warn)"></span>${n.text}</span>`).join('');
   document.getElementById('legend').innerHTML = shifts + notes;
 }
 function jumpToday(){
